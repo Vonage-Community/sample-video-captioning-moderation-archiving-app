@@ -208,6 +208,5 @@ __marimo__/
 
 # App specific
 private.key
-echo.py
 .DS_Store
 .env
