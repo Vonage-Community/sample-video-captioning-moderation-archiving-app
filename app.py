@@ -1,38 +1,58 @@
 from flask import Flask, render_template, request
-from decouple import config
-from opentok import Client
+import os
+from dotenv import load_dotenv
+from vonage import Vonage, Auth
+from vonage_video import TokenOptions
+
+load_dotenv()
+
+application_id = os.getenv("VONAGE_APPLICATION_ID")
+vonage_private_key = os.getenv("VONAGE_PRIVATE_KEY")
+
+vonage_client = Vonage(
+    Auth(
+        application_id=application_id,
+        private_key=vonage_private_key,
+    )
+)
+
+video_session = vonage_client.video.create_session()
+session_id = video_session.session_id
+
+app = Flask(__name__, static_url_path="")
 
 
-opentok_api = config('OPENTOK_API')
-opentok_secret = config('OPENTOK_SECRET')
-
-client = Client(opentok_api, opentok_secret)
-session_id = client.create_session().session_id
-
-app = Flask(__name__, static_url_path='')
-
-
-@app.route('/', methods=['POST', 'GET'])
+@app.route("/", methods=["POST", "GET"])
 def index():
-    if request.method == 'POST':
-        token = client.generate_token(session_id)
+    index_text = f"Please log in: As an <a href='admin'>Admin</a> or as a <a href='join'>Participant</a>"
+    if request.method == "POST":
+        token_options = TokenOptions(session_id=session_id)
+        token = vonage_client.video.generate_client_token(token_options).decode("utf-8")
         admin = False
-        if 'admin' in request.form:
+
+        if "admin" in request.form:
             admin = True
-        name = request.form['name']
-        return render_template('index.html', session_id=session_id, token=token, is_admin=admin, name=name,
-                               api_key=opentok_api)
-    return 'please log in'
+        name = request.form["name"]
+        return render_template(
+            "index.html",
+            session_id=session_id,
+            token=token,
+            is_admin=admin,
+            name=name,
+            application_id=application_id,
+        )
+
+    return index_text
 
 
-@app.route('/admin')
+@app.route("/admin")
 def admin():
-    return render_template('admin.html')
+    return render_template("admin.html")
 
 
-@app.route('/join')
+@app.route("/join")
 def join():
-    return render_template('join.html')
+    return render_template("join.html")
 
 
 app.debug = True

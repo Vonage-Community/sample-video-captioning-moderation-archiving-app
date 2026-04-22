@@ -1,5 +1,5 @@
 const sessionId = document.querySelector('#session_id').dataset.name;
-const apiKey = document.querySelector('#api_key').dataset.name;
+const apiKey = document.querySelector('#application_id').dataset.name;
 const token = document.querySelector('#token').dataset.name;
 
 // Initialize session
