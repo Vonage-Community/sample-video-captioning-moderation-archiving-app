@@ -1,37 +1,9 @@
-<!DOCTYPE html>
+<script src="https://unpkg.com/@vonage/client-sdk-video@latest/dist/js/opentok.js"></script>
 
-<head>
-    <style>
-        body {background-color: coral;
-        text-align: center;
-
-        }
-        #submit {
-              background-color: black;
-              border: none;
-              color: white;
-              padding: 15px 32px;
-              text-align: center;
-              text-decoration: none;
-              display: inline-block;
-              font-size: 16px;
-            }
-        input {
-            width: 20%;
-            height: 50px;
-        }
-    </style>
-</head>
-<html>
-<body>
-<br><br><br>
-<h1> Welcome! </h1>
-<h2>What is your name admin?</h2>
-
-<form action="/" method="post">
-  <input type="text" id="admin" name="admin" hidden><br>
-  <input type="text" id="name" name="name" placeholder="Your name"><br><br>
-  <input type="submit" value="Submit" id="submit">
+<h2>Admin Login</h2>
+<form method="POST" action="/">
+    <label for="nameInput">Your name:</label><br />
+    <input id="nameInput" name="name" type="text" placeholder="Enter your name" required /><br /><br />
+    <input type="hidden" name="admin" value="true" />
+    <button type="submit">Start Session</button>
 </form>
-</body>
-</html>
