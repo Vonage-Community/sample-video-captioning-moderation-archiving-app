@@ -1,37 +1,42 @@
 <!doctype html>
-<html lang="en" slot="">
+<html lang="en">
 
 <head>
   <title>Vonage Video Sample App</title>
   <meta name="viewport" content="width=device-width">
-
   <script src="https://unpkg.com/@vonage/client-sdk-video@latest/dist/js/opentok.js"></script>
-
-  <script>
-    const applicationId = "{{ application_id }}";
-    const sessionId = "{{ session_id }}";
-    const token = "{{ token }}";
-    const isAdmin = "{{ is_admin | tojson }}";
-    const name = "{{ name }}";
-  </script>
-
   <script src="/static/app.js"></script>
 </head>
 
 <body>
 
-  <div id="subscriber"></div>
-  <div id="publisher"></div>
+  <div id="loginContainer">
+    <h2>Join Video Session</h2>
+    <form id="loginForm" onsubmit="handleLogin(event)">
+      <label for="nameInput">Your name:</label><br />
+      <input id="nameInput" name="name" type="text" placeholder="Enter your name" required /><br /><br />
 
+      <label>
+        <input type="checkbox" id="adminCheckbox" name="admin" />
+        Join as Admin
+      </label><br /><br />
 
-  <div id="chat">
-    <div id="messages"></div>
-    <form id="chatForm" onsubmit="sendChat(event)">
-      <input id="chatInput" type="text" placeholder="Type a message..." required />
-      <button type="submit">Send</button>
+      <button type="submit">Join Session</button>
     </form>
   </div>
 
+  <div id="sessionContainer" style="display:none;">
+    <div id="subscriber"></div>
+    <div id="publisher"></div>
+
+    <div id="chat">
+      <div id="messages"></div>
+      <form id="chatForm" onsubmit="sendChat(event)">
+        <input id="chatInput" type="text" placeholder="Type a message..." required />
+        <button type="submit">Send</button>
+      </form>
+    </div>
+  </div>
 
 </body>
 
