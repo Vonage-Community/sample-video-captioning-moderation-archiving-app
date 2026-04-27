@@ -7,7 +7,7 @@ from vonage_video.models import SessionOptions, TokenOptions, MediaMode
 load_dotenv()
 
 application_id = os.getenv("VONAGE_APPLICATION_ID")
-vonage_private_key = os.getenv("VONAGE_PRIVATE_KEY")
+vonage_private_key = os.getenv("VONAGE_PRIVATE_KEY_PATH")
 
 vonage_client = Vonage(
     Auth(
