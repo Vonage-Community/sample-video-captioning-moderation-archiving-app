@@ -23,28 +23,30 @@ session_id = video_session.session_id
 app = Flask(__name__)
 
 
-
 @app.route("/", methods=["GET"])
 def index():
     return render_template("index.html")
+
 
 @app.route("/api/generate-session", methods=["POST"])
 def generate_session():
     """API endpoint that generates and returns token and session data"""
     token_options = TokenOptions(session_id=session_id)
     token = vonage_client.video.generate_client_token(token_options).decode("utf-8")
-    
+
     admin = "admin" in request.form
     name = request.form.get("name", "")
-    
-    return jsonify({
-        "session_id": session_id,
-        "token": token,
-        "is_admin": admin,
-        "name": name,
-        "application_id": application_id,
-        "success": True
-    })
+
+    return jsonify(
+        {
+            "session_id": session_id,
+            "token": token,
+            "is_admin": admin,
+            "name": name,
+            "application_id": application_id,
+            "success": True,
+        }
+    )
 
 
 if __name__ == "__main__":
