@@ -101,3 +101,10 @@ You should be redirected to a page that displays your device’s video feed. **N
 With this video feed established, send the same ngrok URL to a friend and have them join _without_ selecting the option to **Join as Admin**. This will add them to the session as a subscriber so they will only be able to see the video from the Admin’s camera.
 
 The chat feature works for all participants. When you enter text in the field and click **Send**, the text will be visible for all participants.
+
+## References
+
+- [A Comprehensive Guide on Working with Python Virtual Environments](https://vonage.dev/42D6eeT)
+- [Vonage Video API for Developers](https://vonage.dev/4txlo1b)
+- [Vonage Video API key terms](https://vonage.dev/498HP4z)
+- [Signaling in the Video API](https://vonage.dev/42EWDnT)
