@@ -210,4 +210,3 @@ __marimo__/
 private.key
 .DS_Store
 .env
-video_sessions.db
