@@ -1,15 +1,24 @@
-from flask import Flask, render_template, request, jsonify, redirect
+from flask import Flask, render_template, request, jsonify, session
 import os
 from dotenv import load_dotenv
 from vonage import Vonage, Auth
-from vonage_video.models import SessionOptions, TokenOptions, MediaMode, CreateArchiveRequest, Archive
-from database import db
+from vonage_video.models import (
+    SessionOptions,
+    TokenOptions,
+    MediaMode,
+    CreateArchiveRequest,
+    Archive,
+    CaptionsData,
+    CaptionsOptions,
+    TokenRole,
+)
 
+# Retrieve environment variables
 load_dotenv()
-
 application_id = os.getenv("VONAGE_APPLICATION_ID")
 vonage_private_key = os.getenv("VONAGE_PRIVATE_KEY_PATH")
 
+# Instantiate a Vonage client
 vonage_client = Vonage(
     Auth(
         application_id=application_id,
@@ -17,14 +26,15 @@ vonage_client = Vonage(
     )
 )
 
+# Instantiate a video session
 session_options = SessionOptions(media_mode=MediaMode.ROUTED)
 video_session = vonage_client.video.create_session(options=session_options)
 session_id = video_session.session_id
 
+# Create a Flask instance
 app = Flask(__name__)
+app.secret_key = "development-secret-key"
 
-# Store active sessions in memory (session_id -> session info)
-active_sessions = {}
 
 @app.route("/", methods=["GET"])
 def index():
@@ -33,18 +43,22 @@ def index():
 
 @app.route("/api/generate-session", methods=["POST"])
 def generate_session():
-    """API endpoint that generates and returns token and session data"""
-    token_options = TokenOptions(session_id=session_id)
-    token = vonage_client.video.generate_client_token(token_options).decode("utf-8")
-    # db_session_id = db.create_session(session_id)
+    """API endpoint that generates and returns token and session data
+    Assigns roles to tokens based on whether the user joins the session as an admin or not
+    """
 
-    # Store in memory
-    # active_sessions[session_id] = {
-    #     'db_id': db_session_id,
-    # }
-
-    admin = "admin" in request.form
     name = request.form.get("name", "")
+    admin = "admin" in request.form
+
+    if admin:
+        token_options = TokenOptions(session_id=session_id, role=TokenRole.MODERATOR)
+    else:
+        token_options = TokenOptions(session_id=session_id, role=TokenRole.PUBLISHER)
+    token = vonage_client.video.generate_client_token(token_options).decode("utf-8")
+
+    # Add to the Flask session
+    session["is_admin"] = admin
+    session["token"] = token
 
     return jsonify(
         {
@@ -57,29 +71,76 @@ def generate_session():
         }
     )
 
+
+# ===============================
+# Endpoints for closed captioning
+# ===============================
+@app.route("/captions/start", methods=["POST"])
+def start_captions():
+    """Endpoint to start captions"""
+    data = request.get_json()
+    print(f"Start captions request data: ==> {data}")
+    session_id = data.get("sessionId")
+    token_id = data.get("token")
+
+    if not session.get("is_admin"):
+        return jsonify({"error": "Unauthorized"}), 403
+
+    if not session_id or not token_id:
+        return jsonify({"error": "sessionId or token is missing"}), 400
+
+    options = CaptionsOptions(
+        session_id=session_id,
+        token=token_id,
+    )
+
+    captions: CaptionsData = vonage_client.video.start_captions(options)
+
+    return jsonify({"caption_id": captions.captions_id})
+
+
+@app.route("/captions/<captions_id>/stop", methods=["POST"])
+def stop_captions(captions_id):
+    """Endpoint to stop captions"""
+
+    if not captions_id:
+        return jsonify({"error": "no captions id"}), 400
+
+    try:
+        vonage_client.video.stop_captions(CaptionsData(captions_id=captions_id))
+        return jsonify({"success": True}), 202
+    except Exception as e:
+        print(f"Error stopping captions: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+# =======================
+# Endpoints for archiving
+# =======================
 @app.route("/archive/start", methods=["POST"])
 def start_archive():
+    """Endpoint to start archiving"""
     data = request.get_json()
     session_id = data.get("sessionId")
 
+    print(f"flask session: ==> {session}")
+
     if not session_id:
         return jsonify({"error": "sessionId is required"}), 400
+    if not session.get("is_admin"):
+        return jsonify({"error": "Unauthorized"}), 403
 
-    # Start the archive (at least one client must be connected to the session)
     archive_options = CreateArchiveRequest(session_id=session_id)
     archive: Archive = vonage_client.video.start_archive(archive_options)
 
     archive_id = archive.id
 
-    # db.update_session_recording(session_id=session_id, archive_id=archive_id)
-
-    # Store archive.id in your database for later use
     return jsonify({"archive_id": archive_id, "status": archive.status})
+
 
 @app.route("/archive/<archive_id>/stop", methods=["POST"])
 def stop_archive(archive_id):
-    # data = request.get_json()
-    # archive_id = data.get("archiveId")
+    """Endpoint to stop archiving"""
 
     if not archive_id:
         return jsonify({"error": "archiveId is required"}), 400
@@ -87,17 +148,20 @@ def stop_archive(archive_id):
     archive: Archive = vonage_client.video.stop_archive(archive_id)
     return jsonify({"archive_id": archive.id, "status": archive.status})
 
-# Optional: Retrieve archive info (e.g., to get the download URL)
-@app.route("/archive/<archive_id>", methods=["GET"])
-def get_archive(archive_id):
+
+@app.get("/archive/<archive_id>/status")
+def archive_status(archive_id):
+    """Endpoint to check status of archive"""
     try:
         archive = vonage_client.video.get_archive(archive_id)
-        if archive.status == 'available':
-            return redirect(archive.url)
-        else:
-            return jsonify({"message": "Archive not yet available", "status": archive.status}), 202
-    except Exception as error:
-        return jsonify({"error": str(error)}), 500
+        return jsonify(
+            {
+                "status": archive.status,
+                "url": archive.url,
+            }
+        )
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == "__main__":
