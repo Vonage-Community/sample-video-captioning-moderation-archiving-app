@@ -1,3 +1,4 @@
+// State management
 let session;
 let applicationId;
 let sessionId;
