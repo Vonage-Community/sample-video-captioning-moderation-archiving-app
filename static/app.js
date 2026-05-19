@@ -4,11 +4,13 @@ let applicationId;
 let sessionId;
 let token;
 let name;
-let isAdmin;
+let isPresenter;
 let archive = null;
 let captions = null;
 let captionsRemovalTimer;
 let publisher;
+const streams = {};
+const manuallyMutedSet = new Set();
 
 // =================================
 // Login and session initialization
@@ -16,7 +18,7 @@ let publisher;
 
 /**
  * Handles the login form submission
- * Updates UI depending on whether or not user is admin
+ * Updates UI depending on whether or not user is presenter
  * Initializes video connection
  */
 async function handleLogin(event) {
@@ -41,19 +43,21 @@ async function handleLogin(event) {
         sessionId = data.session_id;
         token = data.token;
         name = data.name;
-        isAdmin = data.is_admin ? "true" : "false";
+        isPresenter = data.is_presenter ? "true" : "false";
 
         // Update the UI
         document.getElementById('loginContainer').style.display = 'none';
         document.getElementById('sessionContainer').style.display = 'block';
 
-        if (isAdmin === "true") {
-            console.log(`Admin is:  ${isAdmin}. Styling Admin elements`)
+        if (isPresenter === "true") {
+            console.log(`Presenter is:  ${isPresenter}. Styling Presenter elements`)
             document.getElementById('archiveControls').style.display = 'block';
             document.getElementById('captionControls').style.display = 'block';
+            document.getElementById('mutingControls').style.display = 'block';
         } else {
             document.getElementById('archiveControls').style.display = 'none';
             document.getElementById('captionControls').style.display = 'none';
+            document.getElementById('mutingControls').style.display = 'none';
         }
 
         // Initialize the session    
@@ -65,9 +69,7 @@ async function handleLogin(event) {
 }
 
 /**
- * Handles the login form submission
- * Displays certain elements depending on whether or not user is admin
- * Initializes video connection
+ * Initializes the Vonage Video session and attaches all session event listeners
  */
 function connectToSession() {
     session = OT.initSession(applicationId, sessionId);
@@ -78,7 +80,7 @@ function connectToSession() {
             console.error('Error connecting:', error);
             return;
         }
-        if (isAdmin === "true") {
+        if (isPresenter === "true") {
             const publisherOptions = {
                 name: name,
                 publishCaptions: true,
@@ -93,7 +95,7 @@ function connectToSession() {
                 );
                 captionOnlySub.on('captionReceived', handleCaptionReceived);
             });
-            console.log('Now publishing stream');
+            console.log(`Now publishing stream: ${publisher.stream}`);
         }
     });
 
@@ -101,6 +103,11 @@ function connectToSession() {
     session.on('streamCreated', (event) => {
         const subscriber = session.subscribe(event.stream, 'subscriber');
         subscriber.on('captionReceived', handleCaptionReceived);
+        const stream = event.stream;
+        streams[stream.id] = { id: stream.id, name: stream.name, connectionId: stream.connection.connectionId };
+        addStreamToDropdown(stream.id, stream.name);
+        addStreamToRemoveDropdown(stream.id, stream.name);
+        renderMuteStatusList();
     });
 
     // Listen for signaling events for chat
@@ -109,9 +116,11 @@ function connectToSession() {
         messages.innerHTML += `<p>${event.data}</p>`;
     });
 
-    session.on('sessionDisconnected', (event) => {
-        console.log('Disconnected from session:', event.reason);
+    // Listen for mute forced events
+    session.on('muteForced', (event) => {
+        console.log('Mute forced event, active:', event.active);
     });
+
 
     // Archiving events
     session.on('archiveStarted', (event) => {
@@ -133,6 +142,16 @@ function connectToSession() {
 
     });
 
+    session.on('streamDestroyed', (event) => {
+        removeStreamFromDropdown(event.stream.id);
+        removeFromRemoveDropdown(event.stream.id);
+        renderMuteStatusList();
+    });
+
+    session.on('sessionDisconnected', (event) => {
+        console.log('Disconnected from session:', event.reason);
+    });
+
     setupListeners();
 }
 
@@ -143,6 +162,23 @@ function setupListeners() {
 
     if (captionsStartBtn) captionsStartBtn.addEventListener('click', startClosedCaptioning, false);
     if (captionsStopBtn) captionsStopBtn.addEventListener('click', stopClosedCaptioning, false);
+
+
+    // Close dropdown if user clicks outside
+    document.addEventListener('click', (event) => {
+        document.querySelectorAll('.muteWrapper').forEach((wrapper) => {
+            if (!wrapper.contains(event.target)) {
+                wrapper.querySelector('.muteDropdown')?.classList.remove('open');
+            }
+        });
+    });
+    // Wire up mute buttons
+    const muteSpecificStreamBtn = document.querySelector('#muteSpecificStream');
+    if (muteSpecificStreamBtn) muteSpecificStreamBtn.addEventListener('click', toggleDropdown, false);
+
+    // Wire up removal buttons
+    const removeParticipantBtn = document.querySelector('#removeParticipant');
+    if (removeParticipantBtn) removeParticipantBtn.addEventListener('click', toggleRemoveDropdown, false);
 
     // Wire up archive buttons
     const archiveStartBtn = document.querySelector('#archiveStart');
@@ -161,9 +197,9 @@ function sendChat(event) {
     );
 }
 
-// ======================================
-// Functions for captioning and archiving
-// ======================================
+// ========================
+// Functions for captioning
+// ========================
 
 // Captioning functions
 async function startClosedCaptioning() {
@@ -237,11 +273,131 @@ function handleCaptionReceived(event) {
         captionsText.textContent = '';
     }, removalTimerDuration);
 }
+// ====================
+// Functions for muting
+// ====================
+
+function toggleDropdown() {
+    const dropdown = document.getElementById('muteDropdown');
+    dropdown.classList.toggle('open');
+}
+
+function addStreamToDropdown(streamId, streamName) {
+    // Removed: if (streams[streamId]) return;
+
+    const list = document.getElementById('streamList');
+    const placeholder = list.querySelector('li em');
+    if (placeholder) list.innerHTML = '';
+
+    const li = document.createElement('li');
+    li.setAttribute('data-stream-id', streamId);
+    li.textContent = `Stream: ${streamName || streamId}`;
+    li.onclick = () => muteSpecificStream(streamId);
+    list.appendChild(li);
+}
+
+function hideStreamFromDropdown(streamId) {
+    // Does NOT delete from streams — just removes the DOM element
+    const list = document.getElementById('streamList');
+    const li = list.querySelector(`li[data-stream-id="${streamId}"]`);
+    if (li) list.removeChild(li);
+    if (list.children.length === 0) {
+        list.innerHTML = '<li><em>No streams available</em></li>';
+    }
+}
+
+function removeStreamFromDropdown(streamId) {
+    delete streams[streamId];
+    hideStreamFromDropdown(streamId);
+}
+
+
+
+function renderMuteStatusList() {
+    const list = document.getElementById('muteStatusList');
+    list.innerHTML = '';
+    Object.values(streams).forEach((stream) => {
+        const isMuted = manuallyMutedSet.has(stream.id);
+        const li = document.createElement('li');
+        li.setAttribute('data-stream-id', stream.id);
+        li.textContent = `${stream.name || stream.id} — ${isMuted ? '🔇 Muted' : '🔊 Unmuted'}`;
+        list.appendChild(li);
+    });
+    if (list.children.length === 0) {
+        list.innerHTML = '<li><em>No participants</em></li>';
+    }
+}
+
+// Mute a specific stream
+function muteSpecificStream(streamId) {
+    document.getElementById('muteDropdown').classList.remove('open');
+    fetch('/mute-stream', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId, streamId })
+    })
+        .then((res) => res.json())
+        .then((data) => {
+            console.log(data.message);
+            hideStreamFromDropdown(streamId);
+            manuallyMutedSet.add(streamId);
+            renderMuteStatusList();
+        })
+        .catch((error) => console.error('Error muting stream:', error));
+}
+
+// ======================
+// Functions for removing
+// ======================
+
+function toggleRemoveDropdown() {
+    const dropdown = document.getElementById('removeDropdown');
+    dropdown.classList.toggle('open');
+}
+
+function addStreamToRemoveDropdown(streamId, streamName) {
+    const list = document.getElementById('removeStreamList');
+    const placeholder = list.querySelector('li em');
+    if (placeholder) list.innerHTML = '';
+
+    const li = document.createElement('li');
+    li.setAttribute('data-stream-id', streamId);
+    li.textContent = `${streamName || streamId}`;
+    li.onclick = () => removeParticipant(streamId);
+    list.appendChild(li);
+}
+
+function removeFromRemoveDropdown(streamId) {
+    const list = document.getElementById('removeStreamList');
+    const li = list.querySelector(`li[data-stream-id="${streamId}"]`);
+    if (li) list.removeChild(li);
+    if (list.children.length === 0) {
+        list.innerHTML = '<li><em>No participants</em></li>';
+    }
+}
+
+function removeParticipant(streamId) {
+    document.getElementById('removeDropdown').classList.remove('open');
+    fetch('/remove-participant', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId, connection_id: streams[streamId].connectionId })
+    })
+        .then((res) => res.json())
+        .then((data) => {
+            console.log(data.message);
+            // The streamDestroyed event will handle cleanup
+        })
+        .catch((error) => console.error('Error removing participant:', error));
+}
+// =======================
+// Functions for archiving
+// =======================
 
 // Archiving functions
 async function startArchiving() {
     console.log('Start archiving');
-    
+
     try {
         const response = await fetch('/archive/start', {
             method: 'POST',
@@ -253,7 +409,7 @@ async function startArchiving() {
             console.error('Error starting archive:', archive.error);
         } else {
             console.log('Successfully started archiving: ', archive.archive_id);
-            document.querySelector('#archiveStart').style.display = 'none'; 
+            document.querySelector('#archiveStart').style.display = 'none';
             document.querySelector('#archiveStop').style.display = 'inline';
         }
     } catch (error) {
@@ -268,7 +424,6 @@ async function stopArchiving() {
         const response = await fetch(`/archive/${archiveId}/stop`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({})
         });
         archive = await response.json();
         if (archive.status !== 'stopped') {

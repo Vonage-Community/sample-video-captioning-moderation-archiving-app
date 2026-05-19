@@ -18,8 +18,8 @@
       <input id="nameInput" name="name" type="text" placeholder="Enter your name" required /><br /><br />
 
       <label>
-        <input type="checkbox" id="adminCheckbox" name="admin" />
-        Join as Admin
+        <input type="checkbox" id="presenterCheckbox" name="presenter" />
+        Join as Presenter
       </label><br /><br />
 
       <button type="submit">Join session</button>
@@ -49,6 +49,34 @@
       <button id="captionsStart">Start closed captioning</button>
       <button id="captionsStop" style="display:none;">Stop closed captioning</button>
     </div>
+    
+    <!-- Muting controls -->
+    <div id="mutingControls">
+      <div class="muteWrapper">
+        <button id="muteSpecificStream">Mute ▾</button>
+        <div class="muteDropdown" id="muteDropdown">
+          <ul id="streamList">
+            <li><em>No streams available</em></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="muteWrapper">
+        <button id="removeParticipant">Remove ▾</button>
+        <div class="muteDropdown" id="removeDropdown">
+          <ul id="removeStreamList">
+            <li><em>No participants</em></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    
+    <div id="muteStatusPanel">
+      <h4>Participant mute status</h4>
+      <ul id="muteStatusList"></ul>
+    </div>
+
+
 
     <!-- Archive Controls -->
     <div id="archiveControls">

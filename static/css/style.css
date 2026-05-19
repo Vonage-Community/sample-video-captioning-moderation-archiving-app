@@ -164,7 +164,8 @@ body {
 
 /* Control Buttons */
 #captionControls,
-#archiveControls {
+#archiveControls,
+#mutingControls {
     width: 100%;
     margin-top: 20px;
     padding: 15px;
@@ -177,7 +178,8 @@ body {
 }
 
 #captionControls button,
-#archiveControls button {
+#archiveControls button,
+#mutingControls button {
     padding: 10px 15px;
     background: #00ff00;
     color: #1e1e1e;
@@ -189,11 +191,117 @@ body {
 }
 
 #captionControls button:hover,
-#archiveControls button:hover {
+#archiveControls button:hover,
+#mutingControls button:hover {
     background: #00dd00;
 }
 
 #archiveLink {
     color: #00ff00;
     align-self: center;
+}
+
+/* Mute Dropdown */
+.muteWrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.muteDropdown {
+    display: none;
+    position: absolute;
+    background-color: #2d2d2d;
+    border: 1px solid #00ff00;
+    border-radius: 3px;
+    z-index: 1000;
+    min-width: 200px;
+    box-shadow: 0 2px 6px rgba(0, 255, 0, 0.2);
+}
+
+.muteDropdown.open {
+    display: block;
+}
+
+.muteDropdown ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.muteDropdown ul li {
+    padding: 10px 16px;
+    cursor: pointer;
+    color: #fff;
+    font-family: monospace;
+}
+
+.muteDropdown ul li:hover {
+    background-color: #1e1e1e;
+    color: #00ff00;
+}
+
+.muteDropdown ul li em {
+    color: #888;
+    font-style: italic;
+}
+
+#muteSpecificStream {
+    padding: 10px 15px;
+    background: #00ff00;
+    color: #1e1e1e;
+    border: none;
+    border-radius: 3px;
+    font-weight: bold;
+    cursor: pointer;
+    font-family: monospace;
+}
+
+#muteSpecificStream:hover {
+    background: #00dd00;
+}
+
+#muteStatusPanel {
+    width: 100%;
+    margin-top: 20px;
+    padding: 15px;
+    background: #2d2d2d;
+    border-radius: 5px;
+    border: 1px solid #00ff00;
+}
+
+#muteStatusPanel h4 {
+    color: #00ff00;
+    margin-bottom: 10px;
+    font-family: monospace;
+}
+
+#muteStatusList {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+#muteStatusList li {
+    padding: 8px;
+    background: #1e1e1e;
+    border-left: 3px solid #00ff00;
+    margin-bottom: 6px;
+    font-family: monospace;
+    color: #fff;
+}
+
+/* Remove Dropdown Button */
+#removeParticipant {
+    padding: 10px 15px;
+    background: #00ff00;
+    color: #1e1e1e;
+    border: none;
+    border-radius: 3px;
+    font-weight: bold;
+    cursor: pointer;
+    font-family: monospace;
+}
+
+#removeParticipant:hover {
+    background: #00dd00;
 }

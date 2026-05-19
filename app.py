@@ -44,27 +44,27 @@ def index():
 @app.route("/api/generate-session", methods=["POST"])
 def generate_session():
     """API endpoint that generates and returns token and session data
-    Assigns roles to tokens based on whether the user joins the session as an admin or not
+    Assigns roles to tokens based on whether the user joins the session as an presenter or not
     """
-
+    print(f"REQUEST FORM DATA: ==> {request.form}")
     name = request.form.get("name", "")
-    admin = "admin" in request.form
+    presenter = "presenter" in request.form
 
-    if admin:
+    if presenter:
         token_options = TokenOptions(session_id=session_id, role=TokenRole.MODERATOR)
     else:
         token_options = TokenOptions(session_id=session_id, role=TokenRole.PUBLISHER)
     token = vonage_client.video.generate_client_token(token_options).decode("utf-8")
 
     # Add to the Flask session
-    session["is_admin"] = admin
+    session["is_presenter"] = presenter
     session["token"] = token
 
     return jsonify(
         {
             "session_id": session_id,
             "token": token,
-            "is_admin": admin,
+            "is_presenter": presenter,
             "name": name,
             "application_id": application_id,
             "success": True,
@@ -83,7 +83,7 @@ def start_captions():
     session_id = data.get("sessionId")
     token_id = data.get("token")
 
-    if not session.get("is_admin"):
+    if not session.get("is_presenter"):
         return jsonify({"error": "Unauthorized"}), 403
 
     if not session_id or not token_id:
@@ -115,6 +115,43 @@ def stop_captions(captions_id):
 
 
 # =======================
+# Endpoints for muting
+# =======================
+@app.route("/mute-stream", methods=["POST"])
+def mute_stream():
+    data = request.json
+    print(f"REQUEST DATA: ==> {data}")
+    session_id = data.get("sessionId")
+    stream_id = data.get("streamId")
+
+    print(f"session id: ==> {session_id}")
+    print(f"stream id: ==> {stream_id}")
+
+    vonage_client.video.mute_stream(session_id, stream_id)
+    return jsonify({"message": f"Stream {stream_id} muted successfully."}), 200
+
+
+# =======================
+# Endpoints for removal
+# =======================
+@app.route("/remove-participant", methods=["POST"])
+def remove_participant():
+    data = request.json
+    print(f"REQUEST DATA: ==> {data}")
+    session_id = data.get("sessionId")
+    connection_id = data.get("connection_id")
+
+    print(f"session id: ==> {session_id}")
+    print(f"connection id: ==> {connection_id}")
+
+    vonage_client.video.disconnect_client(session_id, connection_id)
+    return (
+        jsonify({"message": f"Participant {connection_id} removed successfully."}),
+        200,
+    )
+
+
+# =======================
 # Endpoints for archiving
 # =======================
 @app.route("/archive/start", methods=["POST"])
@@ -127,7 +164,7 @@ def start_archive():
 
     if not session_id:
         return jsonify({"error": "sessionId is required"}), 400
-    if not session.get("is_admin"):
+    if not session.get("is_presenter"):
         return jsonify({"error": "Unauthorized"}), 403
 
     archive_options = CreateArchiveRequest(session_id=session_id)
