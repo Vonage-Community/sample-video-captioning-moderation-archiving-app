@@ -203,7 +203,7 @@ function sendChat(event) {
 
 // Captioning functions
 async function startClosedCaptioning() {
-    console.log('Start closed captioning');
+    console.log('Start live captioning');
     try {
         const response = await fetch('/captions/start', {
             method: 'POST',
@@ -228,7 +228,7 @@ async function startClosedCaptioning() {
 }
 
 async function stopClosedCaptioning() {
-    console.log('Stop closed captioning');
+    console.log('Stop live captioning');
     try {
         const response = await fetch(`/captions/${captions.caption_id}/stop`, {
             method: 'POST',

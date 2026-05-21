@@ -35,11 +35,9 @@ session_id = video_session.session_id
 app = Flask(__name__)
 app.secret_key = "development-secret-key"
 
-
 @app.route("/", methods=["GET"])
 def index():
     return render_template("index.html")
-
 
 @app.route("/api/generate-session", methods=["POST"])
 def generate_session():
