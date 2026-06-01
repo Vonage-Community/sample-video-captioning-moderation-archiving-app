@@ -50,7 +50,6 @@ async function handleLogin(event) {
         document.getElementById('sessionContainer').style.display = 'block';
 
         if (isPresenter === "true") {
-            console.log(`Presenter is:  ${isPresenter}. Styling Presenter elements`)
             document.getElementById('archiveControls').style.display = 'block';
             document.getElementById('captionControls').style.display = 'block';
             document.getElementById('mutingControls').style.display = 'block';
@@ -64,7 +63,7 @@ async function handleLogin(event) {
         connectToSession();
 
     } catch (error) {
-        console.error('Error initializing session:', error);
+        console.error('Error initializing session: ', error);
     }
 }
 
@@ -73,11 +72,11 @@ async function handleLogin(event) {
  */
 function connectToSession() {
     session = OT.initSession(applicationId, sessionId);
-    console.log('Session created: ', session);
+    console.log('Session created');
 
     session.connect(token, (error) => {
         if (error) {
-            console.error('Error connecting:', error);
+            console.error('Error connecting: ', error);
             return;
         }
         if (isPresenter === "true") {
@@ -118,14 +117,14 @@ function connectToSession() {
 
     // Listen for mute forced events
     session.on('muteForced', (event) => {
-        console.log('Mute forced event, active:', event.active);
+        console.log('Mute forced event, active: ', event.active);
     });
 
 
     // Archiving events
     session.on('archiveStarted', (event) => {
         archive = event;
-        console.log('Archive started: ' + archive.id);
+        console.log('Archive started');
         document.querySelector('#archiveStart').style.display = 'none';
         document.querySelector('#archiveStop').style.display = 'inline';
         document.querySelector('#archiveLink').innerHTML = '';
@@ -133,7 +132,7 @@ function connectToSession() {
 
     session.on('archiveStopped', (event) => {
         archive = event;
-        console.log('Archive stopped: ' + archive.id);
+        console.log('Archive stopped');
         document.querySelector('#archiveStart').style.display = 'inline';
         document.querySelector('#archiveStop').style.display = 'none';
         document.querySelector('#archiveLink').innerHTML = 'Recording processing ...';
@@ -149,7 +148,7 @@ function connectToSession() {
     });
 
     session.on('sessionDisconnected', (event) => {
-        console.log('Disconnected from session:', event.reason);
+        console.log('Disconnected from session: ', event.reason);
     });
 
     setupListeners();
@@ -211,9 +210,9 @@ async function startClosedCaptioning() {
             body: JSON.stringify({ sessionId, token })
         });
         captions = await response.json();
-        console.log('Closed captioning started: ', captions.caption_id);
+        console.log('Live captioning started');
         if (captions.caption_id === undefined) {
-            console.error('Error starting closed captioning:', captions.error);
+            console.error('Error starting live captioning: ', captions.error);
         } else {
             document.querySelector('#captionsStart').style.display = 'none';
             document.querySelector('#captionsStop').style.display = 'inline';
@@ -223,7 +222,7 @@ async function startClosedCaptioning() {
             captionsText.textContent = 'Captions loading ...';
         }
     } catch (error) {
-        console.error('Error:', error);
+        console.error('Error: ', error);
     }
 }
 
@@ -245,13 +244,13 @@ async function stopClosedCaptioning() {
         document.querySelector('#captionsStop').style.display = 'none';
         document.querySelector('#captionsStart').style.display = 'inline';
     } catch (error) {
-        console.error('Error stopping captions:', error);
+        console.error('Error stopping captions: ', error);
     }
 }
 
 // Handle captions
 function handleCaptionReceived(event) {
-    console.log('captionReceived event: ', event);
+    console.log('captionReceived event : ', event);
     const captionsBox = document.getElementById('captionsBox');
     const captionsText = document.getElementById('captionsText');
     const captionsStartBtn = document.querySelector('#captionsStart');
@@ -343,7 +342,7 @@ function muteSpecificStream(streamId) {
             manuallyMutedSet.add(streamId);
             renderMuteStatusList();
         })
-        .catch((error) => console.error('Error muting stream:', error));
+        .catch((error) => console.error('Error muting stream: ', error));
 }
 
 // ======================
@@ -388,7 +387,7 @@ function removeParticipant(streamId) {
             console.log(data.message);
             // The streamDestroyed event will handle cleanup
         })
-        .catch((error) => console.error('Error removing participant:', error));
+        .catch((error) => console.error('Error removing participant: ', error));
 }
 // =======================
 // Functions for archiving
@@ -406,14 +405,14 @@ async function startArchiving() {
         });
         archive = await response.json();
         if (archive.status !== 'started') {
-            console.error('Error starting archive:', archive.error);
+            console.error('Error starting archive: ', archive.error);
         } else {
             console.log('Successfully started archiving: ', archive.archive_id);
             document.querySelector('#archiveStart').style.display = 'none';
             document.querySelector('#archiveStop').style.display = 'inline';
         }
     } catch (error) {
-        console.error('Error:', error);
+        console.error('Error: ', error);
     }
 }
 
@@ -427,14 +426,14 @@ async function stopArchiving() {
         });
         archive = await response.json();
         if (archive.status !== 'stopped') {
-            console.error('Error stopping archive:', archive.error);
+            console.error('Error stopping archive: ', archive.error);
         } else {
             console.log('Successfully stopped archiving: ', archiveId);
             document.querySelector('#archiveStop').style.display = 'none';
             document.querySelector('#archiveStart').style.display = 'inline';
         }
     } catch (error) {
-        console.error('Error:', error);
+        console.error('Error: ', error);
     }
 }
 

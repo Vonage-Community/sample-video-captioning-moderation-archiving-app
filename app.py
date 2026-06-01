@@ -35,16 +35,18 @@ session_id = video_session.session_id
 app = Flask(__name__)
 app.secret_key = "development-secret-key"
 
+
 @app.route("/", methods=["GET"])
 def index():
     return render_template("index.html")
+
 
 @app.route("/api/generate-session", methods=["POST"])
 def generate_session():
     """API endpoint that generates and returns token and session data
     Assigns roles to tokens based on whether the user joins the session as an presenter or not
     """
-    print(f"REQUEST FORM DATA: ==> {request.form}")
+
     name = request.form.get("name", "")
     presenter = "presenter" in request.form
 
@@ -77,7 +79,7 @@ def generate_session():
 def start_captions():
     """Endpoint to start captions"""
     data = request.get_json()
-    print(f"Start captions request data: ==> {data}")
+
     session_id = data.get("sessionId")
     token_id = data.get("token")
 
@@ -108,7 +110,6 @@ def stop_captions(captions_id):
         vonage_client.video.stop_captions(CaptionsData(captions_id=captions_id))
         return jsonify({"success": True}), 202
     except Exception as e:
-        print(f"Error stopping captions: {e}")
         return jsonify({"error": str(e)}), 500
 
 
@@ -118,12 +119,8 @@ def stop_captions(captions_id):
 @app.route("/mute-stream", methods=["POST"])
 def mute_stream():
     data = request.json
-    print(f"REQUEST DATA: ==> {data}")
     session_id = data.get("sessionId")
     stream_id = data.get("streamId")
-
-    print(f"session id: ==> {session_id}")
-    print(f"stream id: ==> {stream_id}")
 
     vonage_client.video.mute_stream(session_id, stream_id)
     return jsonify({"message": f"Stream {stream_id} muted successfully."}), 200
@@ -135,12 +132,8 @@ def mute_stream():
 @app.route("/remove-participant", methods=["POST"])
 def remove_participant():
     data = request.json
-    print(f"REQUEST DATA: ==> {data}")
     session_id = data.get("sessionId")
     connection_id = data.get("connection_id")
-
-    print(f"session id: ==> {session_id}")
-    print(f"connection id: ==> {connection_id}")
 
     vonage_client.video.disconnect_client(session_id, connection_id)
     return (
@@ -157,8 +150,6 @@ def start_archive():
     """Endpoint to start archiving"""
     data = request.get_json()
     session_id = data.get("sessionId")
-
-    print(f"flask session: ==> {session}")
 
     if not session_id:
         return jsonify({"error": "sessionId is required"}), 400
